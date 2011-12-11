@@ -1,0 +1,55 @@
+===============================================================================
+                                   VIEWER
+===============================================================================
+
+===================
+      Author
+===================
+
+Tim Song
+timsong@uvic.ca
+
+===================
+     Overview
+===================
+
+This program loads 3D models in OBJ format and provides a simple arc-ball
+camera to view it. Lights can be added, and different rendering
+modes are available. Additionally, the mesh can be subdivided using the
+Catmull-Clark subdivision algorithm.
+
+Only quad meshes are currently supported.
+
+===================
+      Usage
+===================
+
+- To open an OBJ file, use the "File->Open OBJ" menu command
+
+- Hold and drag the left mouse button to move the camera
+- Hold and drag the right mouse button or use the scroll wheel to zoom
+- Additional camera settings can be configured through the "Edit->Camera"
+  menu option
+- The camera's coordinate can be shown through the "Show->Info" 
+  menu option
+
+- Lights can be configured through the "Edit->Light Sources" menu option
+
+- The coordinate axis can be shown through the "Show->Axis" menu option
+
+- Different rendering modes can be selected in the "Render" menu
+	- Default OpenGL shading
+	- Wireframe
+	- Phong shading
+
+- The "Subdivide" menu allows you to specify the number of steps to perform
+  subdivision. NOTE: This may take a long time for larger meshes.
+
+===================
+     Build
+===================
+
+This program was built using Qt 4.7.0. After installing the framework, run
+> qmake
+> make
+to build the program.
