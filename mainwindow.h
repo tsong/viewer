@@ -20,6 +20,8 @@
 class SubdivideAction : public QAction {
     Q_OBJECT
 
+
+/* Action for subdivision such that signal triggered(uint) can be emitted*/
 public:
     SubdivideAction(uint steps, const QString &text, QObject *parent = 0)
         : QAction(text, parent), m_steps(steps)
@@ -60,7 +62,7 @@ class MainWindow : public QMainWindow {
     private:
         void createMenus();
 
-        GLWidget* glWidget;         //drawing panel
+        GLWidget* glWidget;         //main display widget
         LightDialog *lightDialog;
         CameraDialog *cameraDialog;
 

@@ -21,6 +21,7 @@ void Scene::glDraw() {
 }
 
 void Scene::subdivide(uint steps) {
+    //determine actual number of steps needed to subdivide
     if (m_subdivisionSteps == steps) return;
     if (m_subdivisionSteps > steps) {
         m_subdivisionSteps = 0;

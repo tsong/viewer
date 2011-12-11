@@ -8,9 +8,6 @@ CameraDialog::CameraDialog(Renderer *renderer, QWidget *parent=0)
     this->renderer = renderer;
 
     QDoubleValidator *doubleValidator = new QDoubleValidator(this);
-    /*ox->setValidator(doubleValidator);
-    oy->setValidator(doubleValidator);
-    oz->setValidator(doubleValidator);*/
     min->setValidator(doubleValidator);
     max->setValidator(doubleValidator);
 }

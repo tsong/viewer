@@ -8,10 +8,13 @@ public:
     Scene();
     void setMesh(Mesh *mesh);
     Mesh *getMesh();
-    void glDraw();
-    //GLMmodel *model;
 
+    // draw the scene
+    void glDraw();
+
+    // subdivide the original mesh of the scene by a given number of steps
     void subdivide(uint steps);
+
 protected:
     Mesh *m_mesh;
     Mesh m_subdividedMesh;

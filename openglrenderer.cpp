@@ -18,7 +18,6 @@ void OpenGLRenderer::init(int width, int height) {
     float w = width > height ? 2 : (float)width/height * 2;
     float h = height > width ? 2 : (float)height/width * 2;
     glFrustum(-w/2,w/2,-h/2,h/2,1,100);
-    //gluPerspective(60.0,width/height,1,50);
 
     glMatrixMode(GL_MODELVIEW);
     glClearColor(0,0,0,0);
@@ -39,7 +38,6 @@ void OpenGLRenderer::resize(int width, int height) {
     float w = width > height ? 2 : (float)width/height * 2;
     float h = height > width ? 2 : (float)height/width * 2;
     glFrustum(-w/2,w/2,-h/2,h/2,1,100);
-    //gluPerspective(60.0,width/height,1,100);
 
     glMatrixMode(GL_MODELVIEW);
     glClearColor(0,0,0,0);
@@ -68,11 +66,13 @@ void OpenGLRenderer::setLight(int i, Light light) {
     GLenum lightTable[MAX_GL_LIGHTS] = {GL_LIGHT0, GL_LIGHT1, GL_LIGHT2, GL_LIGHT3, GL_LIGHT4, GL_LIGHT5, GL_LIGHT6, GL_LIGHT7};
     lights[i] = light;
 
+    //get light colors
     Color a = lights[i].ambient;
     Color d = lights[i].diffuse;
     Color s = lights[i].specular;
     Vector3f p = lights[i].pos;
 
+    //set up color and position buffers
     float ambient[4] = {a.r,a.g,a.b,a.a};
     float diffuse[4] = {d.r,d.g,d.b,d.a};
     float specular[4] = {s.r,s.g,s.b,s.a};

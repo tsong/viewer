@@ -134,9 +134,11 @@ void MainWindow::open() {
     QString fileName = QFileDialog::getOpenFileName(this, "Load OBJ File", "", "OBJ Files (*.obj);;All files (*.*)");
     if (fileName == "") return;
 
+    //load mesh
     Mesh *newMesh = Mesh::fromObjFile(fileName);
 
     if (newMesh) {
+        //update current mesh if mesh was loaded successfully
         if (mesh) delete mesh;
         mesh = newMesh;
 
@@ -144,24 +146,13 @@ void MainWindow::open() {
         scene->setMesh(mesh);
         glWidget->getRenderer()->setScene(scene);
     } else {
+        //display error if mesh fails to load
         QMessageBox msgBox;
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setText("Error opening file. Please ensure that the file is a quad mesh.");
         msgBox.exec();
     }
 
-    /*GLMmodel* model = glmReadOBJ((char*)fileName.toAscii().constData());
-
-    glmFacetNormals(model);
-    if (!model->normals)
-        glmVertexNormals(model,90);
-    glmUnitize(model);
-
-    Scene *scene = new Scene();
-    scene->model = model;
-    glWidget->getRenderer()->setScene(scene);*/
-
-    //glWidget->model = model;
     glWidget->repaint();
 }
 

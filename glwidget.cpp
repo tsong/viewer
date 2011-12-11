@@ -17,7 +17,6 @@ void GLWidget::initializeGL() {
         m_renderer->init(width(), height());
 
     //create shaders for phong shading
-    //makeCurrent();
     m_phongShaders = new QGLShaderProgram(context(), this);
     m_phongShaders->addShaderFromSourceFile(QGLShader::Vertex, "phong.vsh");
     m_phongShaders->addShaderFromSourceFile(QGLShader::Fragment, "phong.fsh");
@@ -27,18 +26,10 @@ void GLWidget::initializeGL() {
 void GLWidget::resizeGL(int width, int height) {
     if (m_renderer)
         m_renderer->resize(width, height);
-
-    /*glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glViewport(0,0,width,height);
-    glOrtho(-1,1,-1,1,-1,1);
-    //glFrustum(-2,2,-2,2,-2,2);
-    glMatrixMode(GL_MODELVIEW);*/
-
 }
 
 void GLWidget::paintGL() {
-    //set render mode options
+    //set current render mode options
     switch(m_renderMode) {
     case RENDER_MODE_WIREFRAME:
         glDisable(GL_LIGHTING);
@@ -59,23 +50,6 @@ void GLWidget::paintGL() {
 
     if (m_renderer)
         m_renderer->render();
-
-    /*glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-    //glRotatef(45, 1, 1, 1);
-
-    //Camera camera = m_renderer->getCamera();
-    //camera.setRadial(1);
-    //Vector3f p = camera.toCartesian();
-    //gluLookAt(p.x, p.y, p.z, 0, 0, 0, 0, 1, 0);
-    Camera camera = m_renderer->getCamera();
-    glRotatef(camera.getZenith(), 1, 0, 0);
-    glRotatef(camera.getAzimuth(), 0, 1, 0);
-
-    //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    glColor3f(1,0,0);
-    mesh.glDraw();*/
-
     m_phongShaders->release();
 
     //draw axis
@@ -85,15 +59,15 @@ void GLWidget::paintGL() {
         glBegin(GL_LINES);
             glColor3f(1,0,0);
             glVertex3f(0,0,0);
-            glVertex3f(100,0,0);
+            glVertex3f(1000,0,0);
 
             glColor3f(0,1,0);
             glVertex3f(0,0,0);
-            glVertex3f(0,100,0);
+            glVertex3f(0,1000,0);
 
             glColor3f(0,0,1);
             glVertex3f(0,0,0);
-            glVertex3f(0,0,100);
+            glVertex3f(0,0,1000);
         glEnd();
         glEnable(GL_LIGHTING);
     }
@@ -116,12 +90,6 @@ void GLWidget::mousePressEvent(QMouseEvent *event) {
     if (event->buttons() & Qt::RightButton)
         m_zoomCamera = true;
 
-
-   /* if (event->buttons() & Qt::MiddleButton) {
-        mesh = mesh.subdivide();
-        repaint();
-    }*/
-
     m_lastPos = event->pos();
 }
 
@@ -130,6 +98,7 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event) {
 
     Camera camera = m_renderer->getCamera();
 
+    //calculate camera movement offsets
     QPoint pos = event->pos();
     float dx = pos.x() - m_lastPos.x();
     float dy = pos.y() - m_lastPos.y();
@@ -154,6 +123,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *) {
 }
 
 void GLWidget::wheelEvent(QWheelEvent *event) {
+    //zoom camera
     Camera camera = m_renderer->getCamera();
     camera.setRadial(camera.getRadial() - event->delta() * 0.002);
     m_renderer->setCamera(camera);

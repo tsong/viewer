@@ -132,12 +132,6 @@ void LightDialog::saveLight() {
     s.b = sb->value() / 100.0;
     s.a = 1.0;
 
-    /*Vector3f p;
-    p.x = px->text().toFloat();
-    p.y = py->text().toFloat();
-    p.z = pz->text().toFloat();
-    p.w = type;*/
-
     Vector3f p;
     p.x = px->value() / 100.0 * LIGHT_MAX_X;
     p.y = py->value() / 100.0 * LIGHT_MAX_Y;
@@ -155,8 +149,6 @@ void LightDialog::exec() {
     for (int i = 0; i < renderer->getNumLights(); i++) {
         oldLights[i] = renderer->getLight(i);
     }
-
-    //qDebug() << renderer->getLight(0).getAmbient().r << " " << lights[0].getAmbient().r;
 
     lightChanged(currLight);
     QDialog::exec();

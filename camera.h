@@ -6,6 +6,8 @@
 #define DEFAULT_MAX_RADIAL 5
 #define DEFAULT_MIN_RADIAL 2
 
+/* An arc-ball camera that stores its location in polar coordinates
+   of a hemisphere and distance from origin*/
 class Camera {
     public:
         Camera();

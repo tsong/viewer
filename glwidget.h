@@ -31,7 +31,7 @@ class GLWidget : public QGLWidget {
         void resizeGL(int width, int height);
         void initializeGL();
 
-        /*Mouse input*/
+        /*mouse input*/
         void mousePressEvent(QMouseEvent *event);
         void mouseMoveEvent(QMouseEvent *event);
         void mouseReleaseEvent(QMouseEvent *event);

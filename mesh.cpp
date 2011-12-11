@@ -1,5 +1,5 @@
 #include "mesh.h"
-#include <QtGlobal>
+#include <QFile>
 
 int uintCompare (const void *a, const void *b) {
     uint v1 = *(uint*)a;
@@ -22,37 +22,6 @@ Mesh::~Mesh() {
         free(m_normalBuffer);
 }
 
-Mesh Mesh::cube() {
-    float V[][3] = {{-1,-1,1},
-                    {-1,1,1},
-                    {1,1,1},
-                    {1,-1,1},
-                    {-1,-1,-1},
-                    {-1,1,-1},
-                    {1,1,-1},
-                    {1,-1,-1}};
-
-    uint F[][4] = { {1,4,3,2},
-                    {1,5,8,4},
-                    {2,6,5,1},
-                    {3,7,6,2},
-                    {4,8,7,3},
-                    {6,7,8,5}};
-
-    Mesh M;
-    for (uint i = 0; i < 8; i++) {
-        Vertex v;
-        v.pos = Vector3f(V[i][0]/2.0,V[i][1]/2.0,V[i][2]/2.0);
-        M.m_vertices.push_back(v);
-    }
-
-    for (uint i = 0; i < 6; i++) {
-        M.addFace(F[i][0]-1,F[i][1]-1,F[i][2]-1,F[i][3]-1);
-    }
-
-    return M;
-}
-
 void Mesh::unitize() {
     //find bounding box of mesh
     Vector3f minPos, maxPos;
@@ -64,19 +33,13 @@ void Mesh::unitize() {
         }
     }
 
-    //qDebug() << minPos.x << minPos.y << minPos.z;
-    //qDebug() << maxPos.x << maxPos.y << maxPos.z;
-
-    //Vector3f scale;
-    //for (uint i = 0; i < 3; i++) scale[i] = 1.0/(maxPos[i] - minPos[i]);
-    //qDebug() << scale.x << scale.y << scale.z;
-
+    //calculate scaling factor and offset from origin
     float scale = min(maxPos[0] - minPos[0], maxPos[1] - minPos[1]);
     scale = min(scale, maxPos[2] - minPos[2]);
-
     Vector3f center = (minPos + maxPos)/2.0;
 
-   for (uint i = 0; i < m_vertices.size(); i++) {
+    //scale and translate all vertices in mesh
+    for (uint i = 0; i < m_vertices.size(); i++) {
        Vector3f &pos = m_vertices[i].pos;
        for (uint j = 0; j < 3; j++) {
            pos[j] = pos[j] - center[j]; //translate so center is at origin
@@ -85,11 +48,13 @@ void Mesh::unitize() {
     }
 }
 
+/* parse a line in the form of "<type> <x> <y> <z>" to a coordinate*/
 bool parseCoordinate(QString line, Vector3f& coord) {
     line = line.simplified();
 
     QStringList tokens = line.split(" ", QString::SkipEmptyParts);
-    Q_ASSERT(tokens.size() == 4);
+    if (tokens.size() != 4)
+        return false;
 
     QStringListIterator it(tokens);
     it.next();
@@ -102,12 +67,13 @@ bool parseCoordinate(QString line, Vector3f& coord) {
     return true;
 }
 
+/* parse a line in the form of "<f> <v1/t1/n1> <v2/t2/n2> <v3/t3/n3> <v4/t4/n4>"
+   into a face. The texture and normal indices are optional */
 bool parseFace(QString line, uint *vertices, uint *normals, bool &hasNormals) {
     line = line.simplified();
 
+    //ensure that the face is a quad
     QStringList tokens = line.split(" ", QString::SkipEmptyParts);
-    //qDebug() << tokens;
-    //Q_ASSERT(tokens.size() == 5);
     if (tokens.size() != 5)
         return false;
 
@@ -115,20 +81,22 @@ bool parseFace(QString line, uint *vertices, uint *normals, bool &hasNormals) {
     QStringListIterator it(tokens);
     it.next();
     for (uint i = 0; i < 4; i++) {
+        //parse the token into its vertex, texture, and normal indices
         QString vertexStr = it.next();
         QStringList vertexTokens = vertexStr.split("/");
-        //Q_ASSERT(vertexTokens.size() > 0 && vertexTokens.size() <= 3);
-        ///Q_ASSERT(!hasNormals || vertexTokens.size() == 3); //has normals --> 3 vertex tokens
 
+        //check if data is properly formatted
         bool validVertex = vertexTokens.size() > 0 && vertexTokens.size() <= 3;
         bool validNormals = !hasNormals || vertexTokens.size() == 3; //has normals --> 3 vertex tokens
         if (!validVertex || !validNormals)
             return false;
 
+        //add vertex index
         bool ok = false;
         QStringListIterator vertexIt(vertexTokens);
         vertices[i] = vertexIt.next().toInt(&ok) - 1;
 
+        //since we ignore texture indices, we can skip the second token
         if (vertexTokens.size() == 3) {
             hasNormals = true;
             vertexIt.next();
@@ -149,11 +117,12 @@ Mesh *Mesh::fromObjFile(QString filename) {
     Mesh *M = new Mesh();
     vector<Vector3f> normals;
 
-    //first pass to add all vertices and normals
+    //first pass to add all vertices and normals to mesh
     while (!file.atEnd()) {
         QByteArray lineBytes = file.readLine();
 
         if (lineBytes.at(0) == 'v' && lineBytes.at(1) == 'n') {
+            // parse normal if line starts with 'vn'
             Vector3f normal;
 
             if (!parseCoordinate(QString(lineBytes), normal)) {
@@ -163,6 +132,7 @@ Mesh *Mesh::fromObjFile(QString filename) {
 
             normals.push_back(normal);
         } else if (lineBytes.at(0) == 'v' && lineBytes.at(1) == ' ') {
+            // parse vertex if line starts with just 'v'
             Vertex V;
             if (!parseCoordinate(QString(lineBytes), V.pos)) {
                 delete M;
@@ -172,7 +142,7 @@ Mesh *Mesh::fromObjFile(QString filename) {
         }
     }
 
-    //second pass to add faces
+    //second pass to add faces to the mesh
     file.reset();
     while (!file.atEnd()) {
         QByteArray lineBytes = file.readLine();
@@ -187,6 +157,7 @@ Mesh *Mesh::fromObjFile(QString filename) {
             }
 
             if (hasNormals) {
+                //use normals if they are provided
                 Vector3f faceNormals[4];
                 for (uint i = 0; i < 4; i++) {
                     if (N[i] < normals.size())
@@ -194,6 +165,7 @@ Mesh *Mesh::fromObjFile(QString filename) {
                 }
                 M->addFace(V[0],V[1],V[2],V[3], faceNormals);
             } else {
+                //interpolate normals if they are not provided
                 M->addFace(V[0],V[1],V[2],V[3]);
             }
         }
@@ -203,17 +175,20 @@ Mesh *Mesh::fromObjFile(QString filename) {
 }
 
 Mesh Mesh::subdivide() {
+    //calculate new points in subdivided mesh
     calculatePoints();
 
     Mesh M;
+
+    //each face will become 4 faces in the new mesh
     for (uint i = 0; i < m_faces.size(); i++) {
         Face &f = m_faces[i];
         Vector3f V[4];
         Vector3f N[4];
 
+        //calculate the vertices of the new faces
         V[0] = m_facePoints[i];
         N[0] = m_facePointNormals[i];
-        //for (uint j = 0; j < 4; j++) normals[0] = normals[0] + f.normals[j]/4.0;
         for (uint j = 0; j < 4; j++) {
             V[1] = m_edgePoints[f.edges[j]];
             V[2] = m_vertexPoints[f.vertices[(j+1)%4]];
@@ -222,8 +197,6 @@ Mesh Mesh::subdivide() {
             N[1] = m_edgePointNormals[f.edges[j]];
             N[2] = m_vertexPointNormals[f.vertices[(j+1)%4]];
             N[3] = m_edgePointNormals[f.edges[(j+1)%4]];
-
-            //normals[1] = interpolateNormal()
 
             M.addFace(V[0],V[1],V[2],V[3],N);
         }
@@ -276,29 +249,17 @@ void Mesh::calculatePoints() {
             m_vertexPoints.push_back(m_vertices[i].pos);
             continue;
         }
-        /*if (F.size() != n) {
-            qDebug() << F.size() << E.size();
-            //print edges
-            qDebug() << "ERROR:";
-            for (uint j = 0; j < E.size(); j++) {
-                qDebug() << "    Edge:" << m_edges[E[j]].vertices[0] << m_edges[E[j]].vertices[1];
-            }
-
-            //print faces
-            for (uint j = 0; j < F.size(); j++) {
-                Face &f = m_faces[F[j]];
-                qDebug() << "    Face:" << f.vertices[0] << f.vertices[1] << f.vertices[2] << f.vertices[3];
-            }
-        }*/
         //Q_ASSERT(F.size() == n);
 
         Vector3f p = m_vertices[i].pos;
-        Vector3f f(0,0,0); //average of adjacent face points
-        Vector3f r(0,0,0); //average of adjacent edge midpoints
 
+        // f = average face point of all adjacent faces
+        Vector3f f(0,0,0);
         for (uint j = 0; j < n; j++) f = f + m_facePoints[F[j]];
         f = f / n;
 
+        //r = average coordinate of all adjacent edge midpoints
+        Vector3f r(0,0,0);
         for (uint j = 0; j < n; j++) {
             uint v1 = m_edges[E[j]].vertices[0];
             uint v2 = m_edges[E[j]].vertices[1];
@@ -321,20 +282,12 @@ void Mesh::addFace(uint v1, uint v2, uint v3, uint v4, const Vector3f *normals) 
     uint V[] = {v1,v2,v3,v4};
     uint idx = m_faces.size();
 
+    //deal with each vertex of the face
     for (uint i = 0; i < 4; i++) {
         f.vertices[i] = V[i];
         f.edges[i] = indexOf(V[i],V[(i+1)%4]);
 
         Edge &e = m_edges[f.edges[i]];
-        /*if (e.numFaces >= 2) {
-            Face &f1 = m_faces[e.faces[0]];
-            Face &f2 = m_faces[e.faces[1]];
-
-            qDebug() << "Bad Edge:" << e.vertices[0] << e.vertices[1];
-            qDebug() << "    F1:" << f1.vertices[0] << f1.vertices[1] << f.vertices[2] << f.vertices[3];
-            qDebug() << "    F2:" << f.vertices[0] << f.vertices[1] << f.vertices[2] << f.vertices[3];
-        }*/
-
         Q_ASSERT(e.numFaces < 2);
         e.faces[e.numFaces++] = idx;
         m_vertices[V[i]].faces.push_back(idx);
@@ -371,20 +324,11 @@ void Mesh::addFace(uint v1, uint v2, uint v3, uint v4, const Vector3f *normals) 
         }
     }
 
-
-    /*for (uint i = 0; i < 4; i++) {
-        Vertex &v = m_vertices[f.vertices[i]];
-        if (v.normal.magnitude() == 0)
-            v.normal = f.normals[i];
-        else
-            v.normal = v.normal*0.5 + f.normals[i]*0.5;
-
-    }*/
-
     m_faces.push_back(f);
 }
 
 uint Mesh::indexOf(Vector3f p) {
+    //add new vertex with position p to the mesh if it does not exist
     if (m_pointIdxMap.count(p) == 0) {
         Vertex v;
         v.pos = p;
@@ -401,6 +345,7 @@ uint Mesh::indexOf(uint v1, uint v2) {
     e.vertices[0] = v1;
     e.vertices[1] = v2;
 
+    //add edge e to the mesh if it does not exist
     if (m_edgeIdxMap.count(e) == 0) {
         m_edges.push_back(e);
         uint idx = m_edges.size()-1;
@@ -453,10 +398,12 @@ void Mesh::createBuffers() {
 }
 
 void Mesh::glDraw() {
+    //get vertex and normal buffers
     uint numVertices;
     const float *vertexBuffer = getVertexBuffer(numVertices);
     const float *normalBuffer = getNormalBuffer(numVertices);
 
+    //draw arrays using openGL
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
         if (vertexBuffer) glVertexPointer(3, GL_FLOAT, 0, vertexBuffer);
@@ -464,91 +411,4 @@ void Mesh::glDraw() {
         glDrawArrays(GL_QUADS, 0, numVertices);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
-
-
-    /*glBegin(GL_QUADS);
-    for (uint i = 0; i < m_faces.size(); i++) {
-        Face &f = m_faces[i];
-
-        for (uint j = 0; j < 4; j++) {
-            Vertex &v = m_vertices[f.vertices[j]];
-            Vector3f &p = v.pos;
-
-            glNormal3f(f.normals[j].x, f.normals[j].y, f.normals[j].z);
-            //glNormal3f(n.x, n.y, n.z);
-            //glNormal3f(v.normal.x, v.normal.y, v.normal.z);
-            glVertex3f(p[0],p[1],p[2]);
-        }
-    }
-    glEnd();*/
-
-    /*glDisable(GL_LIGHTING);
-    glColor3f(1,0,0);
-    glBegin(GL_LINES);
-    for (uint i = 0; i < m_faces.size(); i++) {
-        Face &f = m_faces[i];
-
-        Vector3f v1 = m_vertices[f.vertices[0]].pos - m_facePoints[i];
-        Vector3f v2 = m_vertices[f.vertices[3]].pos - m_facePoints[i];
-        Vector3f n = v1.cross(v2);
-        n = n / n.magnitude() * -1;
-
-        //glVertex3f(m_facePoints[i][0],m_facePoints[i][1],m_facePoints[i][2]);
-        //glVertex3f(n.x, n.y, n.z);
-
-        for (uint j = 0; j < 4; j++) {
-            Vector3f &p = m_vertices[f.vertices[i]].pos;
-            //Vector3f delta = p - m_facePoints[i];
-            //Vector3f norm = n + delta;
-            Vector3f norm = p + n;
-
-            glVertex3f(p[0],p[1],p[2]);
-            //glVertex3f(n.x, n.y, n.z);
-            glVertex3f(norm.x,norm.y,norm.z);
-        }
-    }
-    glEnd();
-    glEnable(GL_LIGHTING);*/
-
-    /*calculatePoints();
-
-    glPointSize(5);
-    glBegin(GL_POINTS);
-    glColor3f(1,0,0);
-    for (uint i = 0; i < m_facePoints.size(); i++) {
-        Vector3f &p = m_facePoints[i];
-        glVertex3f(p[0],p[1],p[2]);
-    }
-
-    glColor3f(0,1,0);
-    for (uint i = 0; i < m_edgePoints.size(); i++) {
-        Vector3f &p = m_edgePoints[i];
-        glVertex3f(p[0],p[1],p[2]);
-    }
-
-    glColor3f(0,0,1);
-    for (uint i = 0; i < m_vertexPoints.size(); i++) {
-        Vector3f &p = m_vertexPoints[i];
-        glVertex3f(p[0],p[1],p[2]);
-    }
-    glEnd();
-
-    glColor3f(0,0,1);
-    glBegin(GL_QUADS);
-    for (uint i = 0; i < m_faces.size(); i++) {
-        Face &f = m_faces[i];
-        Vector3f V[4];
-
-        V[0] = m_facePoints[i];
-        for (uint j = 0; j < 4; j++) {
-            V[1] = m_edgePoints[f.edges[j]];
-            V[2] = m_vertexPoints[f.vertices[(j+1)%4]];
-            V[3] = m_edgePoints[f.edges[(j+1)%4]];
-
-            for (uint k = 0; k < 4; k++) {
-                glVertex3f(V[k][0], V[k][1], V[k][2]);
-            }
-        }
-    }
-    glEnd();*/
 }
